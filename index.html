@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>مقارنة المنتجات - تصميم بالبطاقات</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
       import {
@@ -99,43 +100,44 @@
       window.createComparisonCard = function (data = {}) {
         const container = document.getElementById("product-comparisons");
         const card = document.createElement("div");
-        card.className = "bg-white shadow rounded-xl p-6 relative group";
+        card.className =
+          "bg-white shadow rounded-xl p-6 relative group text-right";
         card.innerHTML = `
-        <button class="absolute top-2 left-2 bg-red-500 hover:bg-red-600 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200" title="حذف" onclick="this.parentElement.remove(); window.updateStorage();">
+        <button class="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200" title="حذف" onclick="this.parentElement.remove(); window.updateStorage();">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div class="border rounded-lg p-4">
-            <input type="text" class="text-xl font-bold text-blue-700 mb-2 w-full" value="${
+            <input type="text" class="text-xl font-bold text-blue-700 mb-2 w-full text-right" value="${
               data.aCompany || "الشركة الأولى"
             }" />
-            <input type="text" placeholder="اسم المنتج" class="mb-2 w-full border p-2 rounded" value="${
+            <input type="text" placeholder="اسم المنتج" class="mb-2 w-full border p-2 rounded text-right" value="${
               data.aProduct || ""
             }" />
-            <input type="number" placeholder="السعر الأصلي" class="mb-2 w-full border p-2 rounded" value="${
+            <input type="number" placeholder="السعر الأصلي" class="mb-2 w-full border p-2 rounded text-right" value="${
               data.aPrice || ""
             }" />
-            <input type="number" placeholder="الوزن (كجم)" class="mb-2 w-full border p-2 rounded" value="${
+            <input type="number" placeholder="الوزن (كجم)" class="mb-2 w-full border p-2 rounded text-right" value="${
               data.aWeight || ""
             }" />
-            <div class="text-gray-700 font-semibold">سعر الكيلو: <span class="a-kilo text-black">-</span></div>
+            <div class="text-gray-700 font-semibold text-right">سعر الكيلو: <span class="a-kilo text-black">-</span></div>
           </div>
           <div class="border rounded-lg p-4">
-            <input type="text" class="text-xl font-bold text-green-700 mb-2 w-full" value="${
+            <input type="text" class="text-xl font-bold text-green-700 mb-2 w-full text-right" value="${
               data.bCompany || "الشركة الثانية"
             }" />
-            <input type="text" placeholder="اسم المنتج" class="mb-2 w-full border p-2 rounded" value="${
+            <input type="text" placeholder="اسم المنتج" class="mb-2 w-full border p-2 rounded text-right" value="${
               data.bProduct || ""
             }" />
-            <input type="number" placeholder="السعر الأصلي" class="mb-2 w-full border p-2 rounded" value="${
+            <input type="number" placeholder="السعر الأصلي" class="mb-2 w-full border p-2 rounded text-right" value="${
               data.bPrice || ""
             }" />
-            <input type="number" placeholder="الوزن (كجم)" class="mb-2 w-full border p-2 rounded" value="${
+            <input type="number" placeholder="الوزن (كجم)" class="mb-2 w-full border p-2 rounded text-right" value="${
               data.bWeight || ""
             }" />
-            <div class="text-gray-700 font-semibold">سعر الكيلو: <span class="b-kilo text-black">-</span></div>
+            <div class="text-gray-700 font-semibold text-right">سعر الكيلو: <span class="b-kilo text-black">-</span></div>
           </div>
         </div>
         <div class="mt-6 border-t pt-4 grid grid-cols-2 gap-4 text-center">
@@ -152,6 +154,48 @@
 
       window.addComparisonCard = function () {
         window.createComparisonCard();
+      };
+
+      window.exportToExcel = function () {
+        const cards = document.querySelectorAll("#product-comparisons > div");
+        const rows = [
+          [
+            "الشركة",
+            "اسم المنتج",
+            "السعر",
+            "الوزن",
+            "سعر الكيلو",
+            "الأفضل سعراً",
+            "فرق السعر (%)",
+          ],
+        ];
+
+        cards.forEach((card) => {
+          const inputs = card.querySelectorAll("input");
+          const aCompany = inputs[0].value;
+          const aProduct = inputs[1].value;
+          const aPrice = inputs[2].value;
+          const aWeight = inputs[3].value;
+          const aKilo = card.querySelector(".a-kilo").textContent;
+
+          const bCompany = inputs[4].value;
+          const bProduct = inputs[5].value;
+          const bPrice = inputs[6].value;
+          const bWeight = inputs[7].value;
+          const bKilo = card.querySelector(".b-kilo").textContent;
+
+          const better = card.querySelector(".better-price").textContent;
+          const diff = card.querySelector(".price-diff").textContent;
+
+          rows.push([aCompany, aProduct, aPrice, aWeight, aKilo, better, diff]);
+          rows.push([bCompany, bProduct, bPrice, bWeight, bKilo, "", ""]);
+          rows.push([]);
+        });
+
+        const worksheet = XLSX.utils.aoa_to_sheet(rows);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "المقارنات");
+        XLSX.writeFile(workbook, "مقارنة_المنتجات.xlsx");
       };
     </script>
     <link
@@ -173,12 +217,18 @@
 
       <div id="product-comparisons" class="space-y-6"></div>
 
-      <div class="flex justify-end mt-6">
+      <div class="flex justify-end mt-6 gap-4">
         <button
           onclick="addComparisonCard()"
           class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow"
         >
           + إضافة مقارنة جديدة
+        </button>
+        <button
+          onclick="exportToExcel()"
+          class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg shadow"
+        >
+          📤 تصدير إلى Excel
         </button>
       </div>
     </div>
