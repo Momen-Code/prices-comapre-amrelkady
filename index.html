@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>مقارنة المنتجات - تصميم بالبطاقات</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+      import {
+        getFirestore,
+        doc,
+        setDoc,
+        getDoc,
+      } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyBnH-VzVeKw4-ebADGCyS_QIVWcolQqwF4",
+        authDomain: "amrelkady-7455d.firebaseapp.com",
+        projectId: "amrelkady-7455d",
+        storageBucket: "amrelkady-7455d.firebasestorage.app",
+        messagingSenderId: "1068284076708",
+        appId: "1:1068284076708:web:02d47cc40d81cb6e21bc31",
+        measurementId: "G-4YGNNJN2JH",
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+      const userDocRef = doc(db, "shared_comparisons", "global");
+
+      (async () => {
+        const docSnap = await getDoc(userDocRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data().list || [];
+          data.forEach((item) => createComparisonCard(item));
+        } else {
+          createComparisonCard();
+        }
+      })();
+
+      function saveToFirestore(data) {
+        setDoc(userDocRef, { list: data });
+      }
+
+      function calculateAndUpdate(card) {
+        const inputs = card.querySelectorAll("input");
+        const aPrice = parseFloat(inputs[2].value) || 0;
+        const aWeight = parseFloat(inputs[3].value) || 0;
+        const bPrice = parseFloat(inputs[6].value) || 0;
+        const bWeight = parseFloat(inputs[7].value) || 0;
+        const aKilo = aWeight ? (aPrice / aWeight).toFixed(2) : "-";
+        const bKilo = bWeight ? (bPrice / bWeight).toFixed(2) : "-";
+
+        card.querySelector(".a-kilo").textContent = aKilo;
+        card.querySelector(".b-kilo").textContent = bKilo;
+
+        const result1 = card.querySelector(".better-price");
+        const result2 = card.querySelector(".price-diff");
+
+        if (aKilo !== "-" && bKilo !== "-") {
+          const a = parseFloat(aKilo);
+          const b = parseFloat(bKilo);
+          if (a === b) {
+            result1.textContent = "تعادل";
+            result2.textContent = "0%";
+          } else {
+            const better = a < b ? "الشركة الأولى" : "الشركة الثانية";
+            const diff = ((Math.abs(a - b) / Math.max(a, b)) * 100).toFixed(1);
+            result1.textContent = better;
+            result2.textContent = `${diff}%`;
+          }
+        } else {
+          result1.textContent = "-";
+          result2.textContent = "-";
+        }
+      }
+
+      window.updateStorage = function () {
+        const cards = document.querySelectorAll("#product-comparisons > div");
+        const data = Array.from(cards).map((card) => {
+          calculateAndUpdate(card);
+          const inputs = card.querySelectorAll("input");
+          return {
+            aCompany: inputs[0].value,
+            aProduct: inputs[1].value,
+            aPrice: inputs[2].value,
+            aWeight: inputs[3].value,
+            bCompany: inputs[4].value,
+            bProduct: inputs[5].value,
+            bPrice: inputs[6].value,
+            bWeight: inputs[7].value,
+          };
+        });
+        saveToFirestore(data);
+      };
+
+      window.createComparisonCard = function (data = {}) {
+        const container = document.getElementById("product-comparisons");
+        const card = document.createElement("div");
+        card.className = "bg-white shadow rounded-xl p-6 relative group";
+        card.innerHTML = `
+        <button class="absolute top-2 left-2 bg-red-500 hover:bg-red-600 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200" title="حذف" onclick="this.parentElement.remove(); window.updateStorage();">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="border rounded-lg p-4">
+            <input type="text" class="text-xl font-bold text-blue-700 mb-2 w-full" value="${
+              data.aCompany || "الشركة الأولى"
+            }" />
+            <input type="text" placeholder="اسم المنتج" class="mb-2 w-full border p-2 rounded" value="${
+              data.aProduct || ""
+            }" />
+            <input type="number" placeholder="السعر الأصلي" class="mb-2 w-full border p-2 rounded" value="${
+              data.aPrice || ""
+            }" />
+            <input type="number" placeholder="الوزن (كجم)" class="mb-2 w-full border p-2 rounded" value="${
+              data.aWeight || ""
+            }" />
+            <div class="text-gray-700 font-semibold">سعر الكيلو: <span class="a-kilo text-black">-</span></div>
+          </div>
+          <div class="border rounded-lg p-4">
+            <input type="text" class="text-xl font-bold text-green-700 mb-2 w-full" value="${
+              data.bCompany || "الشركة الثانية"
+            }" />
+            <input type="text" placeholder="اسم المنتج" class="mb-2 w-full border p-2 rounded" value="${
+              data.bProduct || ""
+            }" />
+            <input type="number" placeholder="السعر الأصلي" class="mb-2 w-full border p-2 rounded" value="${
+              data.bPrice || ""
+            }" />
+            <input type="number" placeholder="الوزن (كجم)" class="mb-2 w-full border p-2 rounded" value="${
+              data.bWeight || ""
+            }" />
+            <div class="text-gray-700 font-semibold">سعر الكيلو: <span class="b-kilo text-black">-</span></div>
+          </div>
+        </div>
+        <div class="mt-6 border-t pt-4 grid grid-cols-2 gap-4 text-center">
+          <div class="text-lg font-bold text-indigo-600">الأفضل سعراً: <span class="better-price text-black">-</span></div>
+          <div class="text-lg font-bold text-indigo-600">فرق السعر (%): <span class="price-diff text-black">-</span></div>
+        </div>`;
+
+        container.appendChild(card);
+        window.updateStorage();
+        card.querySelectorAll("input").forEach((input) => {
+          input.addEventListener("input", window.updateStorage);
+        });
+      };
+
+      window.addComparisonCard = function () {
+        window.createComparisonCard();
+      };
+    </script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Cairo", sans-serif;
+        background-color: #f9fafb;
+      }
+    </style>
+  </head>
+  <body class="p-6">
+    <div class="container mx-auto max-w-6xl">
+      <h1 class="text-3xl font-bold text-center text-gray-800 mb-8">
+        مقارنة منتجات شركتين
+      </h1>
+
+      <div id="product-comparisons" class="space-y-6"></div>
+
+      <div class="flex justify-end mt-6">
+        <button
+          onclick="addComparisonCard()"
+          class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow"
+        >
+          + إضافة مقارنة جديدة
+        </button>
+      </div>
+    </div>
+  </body>
+</html>
