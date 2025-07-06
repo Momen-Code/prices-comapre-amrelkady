@@ -158,36 +158,46 @@
           const sheet = sheets.find((s) => s.id === activeSheetId);
           if (!sheet) return;
 
+          let saveTimeout;
+
           document
             .querySelectorAll("#sheets-container input")
             .forEach((input) => {
-              let timeout;
-              input.addEventListener("input", (e) => {
-                clearTimeout(timeout);
-                timeout = setTimeout(() => {
-                  const allInputs = Array.from(
-                    document.querySelectorAll("#sheets-container input")
-                  );
-                  const index = allInputs.indexOf(input);
-                  let compIdx = 0,
-                    fieldIdx = index;
-                  for (const comp of sheet.comparisons) {
-                    const count = comp.companies.length * 4;
-                    if (fieldIdx < count) break;
-                    fieldIdx -= count;
-                    compIdx++;
-                  }
-                  const companyIdx = Math.floor(fieldIdx / 4);
-                  const fieldType = ["name", "product", "price", "weight"][
-                    fieldIdx % 4
-                  ];
-                  sheet.comparisons[compIdx].companies[companyIdx][fieldType] =
-                    e.target.value;
+              input.addEventListener("input", () => {
+                clearTimeout(saveTimeout);
 
+                // تحديث البيانات من واجهة المستخدم (UI) إلى sheet
+                const allInputs = Array.from(
+                  document.querySelectorAll("#sheets-container input")
+                );
+                let inputIndex = 0;
+
+                for (
+                  let compIdx = 0;
+                  compIdx < sheet.comparisons.length;
+                  compIdx++
+                ) {
+                  const comp = sheet.comparisons[compIdx];
+                  for (
+                    let companyIdx = 0;
+                    companyIdx < comp.companies.length;
+                    companyIdx++
+                  ) {
+                    const company = comp.companies[companyIdx];
+                    ["name", "product", "price", "weight"].forEach((field) => {
+                      const value = allInputs[inputIndex]?.value || "";
+                      company[field] = value;
+                      inputIndex++;
+                    });
+                  }
+                }
+
+                // حفظ بعد 5 ثوانٍ من توقف المستخدم عن الكتابة
+                saveTimeout = setTimeout(() => {
                   saveSheet(sheet.id, sheet);
                   renderSheet();
                   attachInputListeners();
-                }, 1000);
+                }, 5000);
               });
             });
         }
